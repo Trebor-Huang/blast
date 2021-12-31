@@ -2,8 +2,9 @@ module Tactics where
 
 open import Blast
 open import Reflection
-open import Data.List
-open import Data.Vec
+open import Data.List.Base
+open import Data.Vec.Base using (Vec; _∷_; [])
+open import Agda.Builtin.Nat
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 private
     -- we need these non-dependent versions to make them easier to quote
@@ -29,3 +30,32 @@ split×? = idtac?
 
 split× : Tactic
 split× = ¿ split×?
+
+private
+    cartPower : ∀ {ℓ} {A : Set ℓ}
+        -> List A -> (n : Nat) -> List (Vec A n)
+    cartPower l zero = [] ∷ []
+    cartPower l (suc n) = cartesianProductWith _∷_ l (cartPower l n)
+
+-- Acts on local context to generate new terms
+local? : ∀ {n : Nat}
+    -> (Vec (Type × Term) n -> List (Type × Term))
+    -> Tactic?
+local? {n = n} F record { goal = goal ; context = context } =
+    simply record { goal = goal ; context = concatMap F combos }
+    where
+        combos : List (Vec (Type × Term) n)
+        combos = cartPower context n
+
+local : ∀ {n : Nat}
+    -> (Vec (Type × Term) n -> List (Type × Term))
+    -> Tactic
+local F = ¿ (local? F)
+
+-- Directly adds new term to context
+pose? : List (Type × Term) -> Tactic?
+pose? ps record { goal = goal ; context = context }
+    = simply record { goal = goal ; context = ps ++ context }
+
+pose : List (Type × Term) -> Tactic
+pose ps = ¿ (pose? ps)

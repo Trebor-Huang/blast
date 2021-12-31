@@ -5,7 +5,7 @@ module Blast where
 open import Reflection hiding (_≟_)
 open import Reflection.Term using (_≟_)
 open import Reflection.TypeChecking.Monad.Syntax
-open import Data.List.Base using (List; []; _∷_; [_]; zipWith) renaming (map to mapₗ)
+open import Data.List.Base using (List; []; _∷_; [_]; zipWith; concatMap) renaming (map to mapₗ; _++_ to _+++_)
 open import Data.Vec.Base using (Vec; []; _∷_; _++_; head; take; drop; map; foldl)
 open import Data.Bool.Base using (Bool; if_then_else_)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
@@ -65,15 +65,18 @@ record Environment : Set where
 open Goal
 open Environment
 
+simply : Goal -> Environment
+simply G = record
+    { #goal = 1
+    ; goals = G ∷ []
+    ; thunk = head }
+
 -- Fetch the current Context, and pack it up into an Environment.
 currentEnv : Term -> TC Environment
 currentEnv hole = do
     ctx <- currentCtx
     g <- inferType hole
-    return (record
-        { #goal = 1
-        ; goals = record { goal = g ; context = ctx } ∷ []
-        ; thunk = head })
+    return (simply record { goal = g ; context = ctx })
 
 -- Tactics are just goal transformers.
 Tactic? = Goal -> Environment
@@ -82,9 +85,7 @@ Tactic = Goal -> List Environment
 ¿ = [_] ∘_
 
 idtac? : Tactic?
-idtac? g .#goal = 1
-idtac? g .goals = g ∷ []
-idtac? g .thunk (tm ∷ _) = tm
+idtac? = simply
 
 idtac : Tactic
 idtac = ¿ idtac?
@@ -176,3 +177,11 @@ assumption? goal @ record { goal = g ; context = ctx }
 assumption : Tactic
 assumption = ¿ assumption?
 
+_>==>_ : Strategy -> Strategy -> Strategy
+s₁ >==> s₂ = concatMap s₂ ∘ s₁
+
+_<|-|>_ : Strategy -> Strategy -> Strategy
+(s₁ <|-|> s₂) env = s₁ env +++ s₂ env
+
+_>==>ₜ_ : Tactic -> Tactic -> Tactic
+(t₁ >==>ₜ t₂) G = (♮ t₁ >==> ♮ t₂) (simply G)
