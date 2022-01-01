@@ -195,6 +195,9 @@ s₁ >==> s₂ = concatMap s₂ ∘ s₁
 _<~>_ : Strategy -> Strategy -> Strategy
 (s₁ <~> s₂) env = s₁ env +++ s₂ env
 
+perhaps : Strategy -> Strategy
+perhaps = _<~> ♯ idtac
+
 -- Apply strategy to top goal.
 ⟦_⟧ : Strategy -> Strategy
 ⟦ st ⟧ env @ record { #goal = zero } = [ env ]
