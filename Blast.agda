@@ -36,7 +36,7 @@ private
     ∑̬ (n ∷ v) = n + ∑̬ v
 
     Vec-List : ∀ {a} {m : Nat} {A : Set a} -> Vec (List A) m -> List (Vec A m)
-    Vec-List [] = []
+    Vec-List [] = [] ∷ []
     Vec-List (xs ∷ vec) = zipWith _∷_ xs (Vec-List vec)
 
 record Goal : Set where
@@ -155,15 +155,17 @@ private
             done n gs (thunk ∘ (newMeta ∷_)) hole
 
     try : List Environment -> Term -> TC ⊤
-    try [] hole = return _
+    try [] hole = typeError (strErr "Blast.try: All attempts failed." ∷ [])
     try (env ∷ envs) hole = noConstraints (done (env .#goal) (env .goals) (env .thunk) hole)
         <|> try envs hole
 
 macro
-    by! : Strategy -> Term -> TC ⊤
-    by! st hole = do
+    by!_ : Strategy -> Term -> TC ⊤
+    by!_ st hole = do
         env <- currentEnv hole
         try (st env) hole
+
+infix 0 by!_
 
 assumption? : Tactic?
 assumption? goal @ record { goal = g ; context = ctx }
@@ -185,3 +187,7 @@ _<|-|>_ : Strategy -> Strategy -> Strategy
 
 _>==>ₜ_ : Tactic -> Tactic -> Tactic
 (t₁ >==>ₜ t₂) G = (♮ t₁ >==> ♮ t₂) (simply G)
+
+infixl 5 _>==>_
+infixl 4 _<|-|>_
+infixl 6 _>==>ₜ_

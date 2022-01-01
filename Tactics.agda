@@ -8,6 +8,7 @@ open import Agda.Builtin.Nat
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 private
     -- we need these non-dependent versions to make them easier to quote
+    -- but marking this as private makes C-c C-m useless
     fst : ∀ {a b} {A : Set a} {B : Set b} -> A × B -> A
     fst = proj₁
     snd : ∀ {a b} {A : Set a} {B : Set b} -> A × B -> B
@@ -59,3 +60,11 @@ pose? ps record { goal = goal ; context = context }
 
 pose : List (Type × Term) -> Tactic
 pose ps = ¿ (pose? ps)
+
+destruct× : Vec (Type × Term) 1 -> List (Type × Term)
+destruct× ((def (quote _×_)
+        (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ ∷ []) , tm) ∷ [])
+    = (ty₁ , def (quote fst) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ []))
+    ∷ (ty₂ , def (quote snd) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ []))
+    ∷ []
+destruct× (u ∷ []) = [ u ]
