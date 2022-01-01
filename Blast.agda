@@ -78,8 +78,9 @@ currentEnv hole = do
     g <- inferType hole
     return (simply record { goal = g ; context = ctx })
 
+Backtracking = List
 -- Tactics are just goal transformers.
-Tactic = Goal -> List Environment
+Tactic = Goal -> Backtracking Environment
 
 fail : Tactic
 fail = const []
@@ -88,7 +89,7 @@ idtac : Tactic
 idtac env = [ simply env ]
 
 -- Strategies are "global" tactics that act on the whole environment.
-Strategy = Environment -> List Environment
+Strategy = Environment -> Backtracking Environment
 
 -- Apply tactic at top goal.
 ♯ : Tactic -> Strategy
@@ -156,7 +157,7 @@ private
     solved sol hole = do
         sol hole
 
-    try : List Environment -> Term -> TC ⊤
+    try : Backtracking Environment -> Term -> TC ⊤
     try [] hole = typeError (strErr "Blast.try: All attempts failed." ∷ [])
     try (env ∷ envs) hole = solved (done (env .#goal) (env .goals) (env .thunk)) hole
         <|> try envs hole
