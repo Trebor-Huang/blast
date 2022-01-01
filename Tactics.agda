@@ -19,48 +19,46 @@ private
     _ʻ_ : ∀ {a b} {A : Set a} {B : Set b} -> A -> B -> A × B
     _ʻ_ = _,_
 
-split×? : Tactic?
-split×? record
+split×′ : Tactic
+split×′ record
     { goal = def (quote _×_)
         (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ ∷ [])
-    ; context = context } = just record
+    ; context = context } = [ record
     { #goal = 2
     ; goals = record { goal = ty₁ ; context = context }
             ∷ record { goal = ty₂ ; context = context }
             ∷ []
     ; thunk = \ { (t₁ ∷ t₂ ∷ []) ->
-        def (quote _ʻ_) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg t₁ ∷ vArg t₂ ∷ [])} }
-split×? = fail?
+        def (quote _ʻ_) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg t₁ ∷ vArg t₂ ∷ [])} } ]
+split×′ = fail
 
 split× : Strategy
-split× = ♮ (¿ split×?)
+split× = ♮ split×′
 
-split⊎₁? : Tactic?
-split⊎₁? record
+split⊎₁′ : Tactic
+split⊎₁′ record
     { goal = def (quote _⊎_)
         (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ ∷ [])
-    ; context = context } = just record
+    ; context = context } = [ record
         { #goal = 1
         ; goals = record { goal = ty₁ ; context = context } ∷ []
         ; thunk = \ { (tm ∷ []) -> con (quote inj₁)
-                (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ [])} }
-split⊎₁? = fail?
-split⊎₁ = ¿ split⊎₁?
+                (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ [])} } ]
+split⊎₁′ = fail
 
-split⊎₂? : Tactic?
-split⊎₂? record
+split⊎₂′ : Tactic
+split⊎₂′ record
     { goal = def (quote _⊎_)
         (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ ∷ [])
-    ; context = context } = just record
+    ; context = context } = [ record
         { #goal = 1
         ; goals = record { goal = ty₂ ; context = context } ∷ []
         ; thunk = \ { (tm ∷ []) -> con (quote inj₂)
-                (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ [])} }
-split⊎₂? = idtac?
-split⊎₂ = ¿ split⊎₂?
+                (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ [])} } ]
+split⊎₂′ = fail
 
 split⊎ : Strategy
-split⊎ = ♮ split⊎₁ <~> ♮ split⊎₂
+split⊎ = ♮ split⊎₁′ <~> ♮ split⊎₂′
 
 private
     cartPower : ∀ {ℓ} {A : Set ℓ}
@@ -69,27 +67,24 @@ private
     cartPower l (suc n) = cartesianProductWith _∷_ l (cartPower l n)
 
 -- Acts on local context to generate new terms
-local? : ∀ {n : Nat}
+local′ : ∀ {n : Nat}
     -> (Vec (Type × Term) n -> List (Type × Term))
-    -> Tactic?
-local? {n = n} F record { goal = goal ; context = context } =
-    just (simply record { goal = goal ; context = concatMap F combos })
-    where
-        combos : List (Vec (Type × Term) n)
-        combos = cartPower context n
+    -> Tactic
+local′ {n = n} F record { goal = goal ; context = context } =
+    [ simply record { goal = goal ; context = concatMap F (cartPower context n) } ]
 
 local : ∀ {n : Nat}
     -> (Vec (Type × Term) n -> List (Type × Term))
     -> Strategy
-local F = ♮ (¿ (local? F))
+local F = ♮ (local′ F)
 
 -- Directly adds new term to context
-pose? : List (Type × Term) -> Tactic?
-pose? ps record { goal = goal ; context = context }
-    = just (simply record { goal = goal ; context = ps ++ context })
+pose′ : List (Type × Term) -> Tactic
+pose′ ps record { goal = goal ; context = context }
+    = [ simply record { goal = goal ; context = ps ++ context } ]
 
 pose : List (Type × Term) -> Strategy
-pose ps = ♮ (¿ (pose? ps))
+pose ps = ♮ (pose′ ps)
 
 destruct× : Vec (Type × Term) 1 -> List (Type × Term)
 destruct× ((def (quote _×_)

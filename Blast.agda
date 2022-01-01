@@ -79,19 +79,10 @@ currentEnv hole = do
     return (simply record { goal = g ; context = ctx })
 
 -- Tactics are just goal transformers.
-Tactic? = Goal -> Maybe Environment
 Tactic = Goal -> List Environment
-¿ : Tactic? -> Tactic
-¿ = fromMaybe ∘_
-
-fail? : Tactic?
-fail? = const nothing
 
 fail : Tactic
 fail = const []
-
-idtac? : Tactic?
-idtac? env = just (simply env)
 
 idtac : Tactic
 idtac env = [ simply env ]
@@ -131,6 +122,7 @@ Strategy = Environment -> List Environment
 ♮ tac record { goals = gs ; thunk = thunk }
     = mapₗ (⋀ thunk) (Vec-List (map tac gs))
 
+idle = ♮ idtac
 
 private
     done : (#goal : Nat)
@@ -177,17 +169,17 @@ macro
 
 infix 0 by!_
 
-assumption? : Tactic?
-assumption? goal @ record { goal = g ; context = ctx }
+assumption′ : Tactic
+assumption′ goal @ record { goal = g ; context = ctx }
     with lookup ctx (does ∘ (_≟ g))
-... | just t = just record
+... | just t = [ record
     { #goal = 0
     ; goals = []
-    ; thunk = const t }
-... | nothing = nothing
+    ; thunk = const t } ]
+... | nothing = []
 
 assumption : Strategy
-assumption = ♮ (¿ assumption?)
+assumption = ♮ assumption′
 
 _>==>_ : Strategy -> Strategy -> Strategy
 s₁ >==> s₂ = concatMap s₂ ∘ s₁
@@ -196,7 +188,7 @@ _<~>_ : Strategy -> Strategy -> Strategy
 (s₁ <~> s₂) env = s₁ env +++ s₂ env
 
 perhaps : Strategy -> Strategy
-perhaps = _<~> ♯ idtac
+perhaps = _<~> idle
 
 -- Apply strategy to top goal.
 ⟦_⟧ : Strategy -> Strategy
