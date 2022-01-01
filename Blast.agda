@@ -5,7 +5,7 @@ module Blast where
 open import Reflection hiding (_≟_)
 open import Reflection.Term using (_≟_)
 open import Reflection.TypeChecking.Monad.Syntax
-open import Data.List.Base using (List; []; _∷_; [_]; zipWith; concatMap) renaming (map to mapₗ; _++_ to _+++_)
+open import Data.List.Base using (List; []; _∷_; [_]; zipWith; concatMap; fromMaybe) renaming (map to mapₗ; _++_ to _+++_)
 open import Data.Vec.Base using (Vec; []; _∷_; _++_; head; take; drop; map; foldl)
 open import Data.Bool.Base using (Bool; if_then_else_)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
@@ -79,16 +79,22 @@ currentEnv hole = do
     return (simply record { goal = g ; context = ctx })
 
 -- Tactics are just goal transformers.
-Tactic? = Goal -> Environment
+Tactic? = Goal -> Maybe Environment
 Tactic = Goal -> List Environment
 ¿ : Tactic? -> Tactic
-¿ = [_] ∘_
+¿ = fromMaybe ∘_
+
+fail? : Tactic?
+fail? = const nothing
+
+fail : Tactic
+fail = const []
 
 idtac? : Tactic?
-idtac? = simply
+idtac? env = just (simply env)
 
 idtac : Tactic
-idtac = ¿ idtac?
+idtac env = [ simply env ]
 
 -- Strategies are "global" tactics that act on the whole environment.
 Strategy = Environment -> List Environment
@@ -103,7 +109,7 @@ Strategy = Environment -> List Environment
         helper record { #goal = m ; goals = gs' ; thunk = thunk' } = record
             { #goal = m + n
             ; goals = gs' ++ gs
-            ; thunk = (\ v -> thunk (thunk' (take _ v) ∷ drop _ v)) }
+            ; thunk = \ v -> thunk (thunk' (take _ v) ∷ drop _ v) }
 
 -- Sort of like operads.
 ⋀ : {n : Nat} -> (Vec Term n -> Term) -> Vec Environment n -> Environment
@@ -154,9 +160,13 @@ private
                 ∷ [] )
             done n gs (thunk ∘ (newMeta ∷_)) hole
 
+    solved : (Term -> TC ⊤) -> (Term -> TC ⊤)
+    solved sol hole = do
+        sol hole
+
     try : List Environment -> Term -> TC ⊤
     try [] hole = typeError (strErr "Blast.try: All attempts failed." ∷ [])
-    try (env ∷ envs) hole = noConstraints (done (env .#goal) (env .goals) (env .thunk) hole)
+    try (env ∷ envs) hole = solved (done (env .#goal) (env .goals) (env .thunk)) hole
         <|> try envs hole
 
 macro
@@ -170,24 +180,32 @@ infix 0 by!_
 assumption? : Tactic?
 assumption? goal @ record { goal = g ; context = ctx }
     with lookup ctx (does ∘ (_≟ g))
-... | just t = record
+... | just t = just record
     { #goal = 0
     ; goals = []
     ; thunk = const t }
-... | nothing = idtac? goal
+... | nothing = nothing
 
-assumption : Tactic
-assumption = ¿ assumption?
+assumption : Strategy
+assumption = ♮ (¿ assumption?)
 
 _>==>_ : Strategy -> Strategy -> Strategy
 s₁ >==> s₂ = concatMap s₂ ∘ s₁
 
-_<|-|>_ : Strategy -> Strategy -> Strategy
-(s₁ <|-|> s₂) env = s₁ env +++ s₂ env
+_<~>_ : Strategy -> Strategy -> Strategy
+(s₁ <~> s₂) env = s₁ env +++ s₂ env
 
-_>==>ₜ_ : Tactic -> Tactic -> Tactic
-(t₁ >==>ₜ t₂) G = (♮ t₁ >==> ♮ t₂) (simply G)
+-- Apply strategy to top goal.
+⟦_⟧ : Strategy -> Strategy
+⟦ st ⟧ env @ record { #goal = zero } = [ env ]
+⟦ st ⟧ record { #goal = suc n ; goals = g ∷ gs ; thunk = thunk }
+    = mapₗ helper (st (simply g))
+    where
+        helper : Environment -> Environment
+        helper record { #goal = m ; goals = gs' ; thunk = thunk' } = record
+            { #goal = m + n
+            ; goals = gs' ++ gs
+            ; thunk = \ v -> thunk (thunk' (take _ v) ∷ drop _ v) }
 
 infixl 5 _>==>_
-infixl 4 _<|-|>_
-infixl 6 _>==>ₜ_
+infixl 4 _<~>_
