@@ -15,3 +15,5 @@ test u v =
     >==> perhaps split×
     >==> assumption
 
+test' : Set
+test' = sorry!

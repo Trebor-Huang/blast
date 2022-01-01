@@ -9,6 +9,8 @@ open import Agda.Builtin.Nat
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]′)
 open import Data.Maybe
+open Goal
+open Environment
 private
     -- we need these non-dependent versions to make them easier to quote
     -- but marking this as private makes C-c C-m useless
@@ -85,6 +87,16 @@ pose′ ps record { goal = goal ; context = context }
 
 pose : List (Type × Term) -> Strategy
 pose ps = ♮ (pose′ ps)
+
+local-pose′ : ∀ {n : Nat}
+    -> (Vec (Type × Term) n -> List (Type × Term))
+    -> Tactic
+local-pose′ F g = ♭ (♯ (local′ F) >==> ♯ (pose′ (g .context))) g
+
+local-pose : ∀ {n : Nat}
+    -> (Vec (Type × Term) n -> List (Type × Term))
+    -> Strategy
+local-pose F = ♮ (local-pose′ F)
 
 destruct× : Vec (Type × Term) 1 -> List (Type × Term)
 destruct× ((def (quote _×_)

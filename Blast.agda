@@ -200,3 +200,11 @@ perhaps = _<~> idle
 
 infixl 5 _>==>_
 infixl 4 _<~>_
+
+macro
+    sorry! : Term -> TC ⊤
+    sorry! hole = do
+        ty <- inferType hole
+        n <- freshName "sorry"
+        declarePostulate (vArg n) ty
+        unify hole (def n [])
