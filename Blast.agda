@@ -192,16 +192,11 @@ perhaps : Strategy -> Strategy
 perhaps = _<~> idle
 
 -- Apply strategy to top goal.
+♭ : Strategy -> Tactic
+♭ st g = st (simply g)
+
 ⟦_⟧ : Strategy -> Strategy
-⟦ st ⟧ env @ record { #goal = zero } = [ env ]
-⟦ st ⟧ record { #goal = suc n ; goals = g ∷ gs ; thunk = thunk }
-    = mapₗ helper (st (simply g))
-    where
-        helper : Environment -> Environment
-        helper record { #goal = m ; goals = gs' ; thunk = thunk' } = record
-            { #goal = m + n
-            ; goals = gs' ++ gs
-            ; thunk = \ v -> thunk (thunk' (take _ v) ∷ drop _ v) }
+⟦_⟧ = ♯ ∘ ♭
 
 infixl 5 _>==>_
 infixl 4 _<~>_
