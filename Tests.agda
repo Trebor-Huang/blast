@@ -8,9 +8,9 @@ open import Data.Vec.Base
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]′)
 
-test : Nat × List Nat -> Vec Nat 3 × Set1 -> Set1 ⊎ (List Nat × Set)
-test u v =
-    by!  local destruct×
+test1 : Nat × List Nat -> Vec Nat 3 × Set1 -> Set1 ⊎ (List Nat × Set)
+test1 u v =
+    by!  destruct×
     >==> split⊎  -- Here a backtracking is introduced.
     >==> perhaps split×
     >==> assumption

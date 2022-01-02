@@ -4,17 +4,19 @@ module Blast where
 
 open import Reflection hiding (_≟_)
 open import Reflection.Term using (_≟_)
+open import Reflection.DeBruijn
 open import Reflection.TypeChecking.Monad.Syntax
-open import Data.List.Base using (List; []; _∷_; [_]; zipWith; concatMap; fromMaybe) renaming (map to mapₗ; _++_ to _+++_)
+open import Data.List.Base using (List; []; _∷_; [_]; zipWith; concatMap; length; _─_) renaming (map to mapₗ; _++_ to _+++_)
 open import Data.Vec.Base using (Vec; []; _∷_; _++_; head; take; drop; map; foldl)
 open import Data.Bool.Base using (Bool; if_then_else_)
-open import Data.Product using (_×_; _,_; proj₁; proj₂)
+open import Data.Product using (_×_; _,_; proj₁; proj₂) renaming (map to mapₚ)
+open import Data.Fin using (Fin) renaming (zero to fz; suc to fs)
+open import Data.Maybe using (Maybe; nothing; just) renaming (map to mapₘ)
 open import Function.Base
 open import Relation.Nullary using (does)
 open import Agda.Builtin.Nat
 open import Agda.Builtin.Unit
 open import Agda.Builtin.String
-open import Agda.Builtin.Maybe
 
 -- Constant parameters
 private
@@ -38,6 +40,11 @@ private
     Vec-List : ∀ {a} {m : Nat} {A : Set a} -> Vec (List A) m -> List (Vec A m)
     Vec-List [] = [] ∷ []
     Vec-List (xs ∷ vec) = zipWith _∷_ xs (Vec-List vec)
+
+    inFin : (m n : Nat) -> Maybe (Fin m)
+    inFin zero n = nothing
+    inFin (suc m) zero = just fz
+    inFin (suc m) (suc n) = mapₘ fs (inFin m n)
 
 record Goal : Set where
     -- A Goal contains a goal type and a list of available terms.
@@ -200,6 +207,20 @@ perhaps = _<~> idle
 
 infixl 5 _>==>_
 infixl 4 _<~>_
+
+-- Snucks in one more argument, and shifts the de Bruijn indices.
+_↑_ : Goal -> Type -> Goal
+record { goal = goal ; context = context } ↑ ty = record
+    { goal = weaken 1 goal
+    ; context = (ty , var 0 []) ∷ mapₗ (mapₚ (weaken 1) (weaken 1)) context }
+infixl 6 _↑_
+
+-- Knocks out something in the context
+_↓_ : Nat -> Goal -> Goal
+n ↓ g with inFin (length (g .context)) n
+... | just i = record g { context = g .context ─ i }
+... | nothing = g
+infixr 6 _↓_
 
 macro
     sorry! : Term -> TC ⊤

@@ -8,7 +8,7 @@ open import Data.Vec.Base using (Vec; _∷_; [])
 open import Agda.Builtin.Nat
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 open import Data.Sum using (_⊎_; inj₁; inj₂; [_,_]′)
-open import Data.Maybe
+open import Function.Base
 open Goal
 open Environment
 private
@@ -20,6 +20,26 @@ private
     snd = proj₂
     _ʻ_ : ∀ {a b} {A : Set a} {B : Set b} -> A -> B -> A × B
     _ʻ_ = _,_
+
+destruct⊎′ : Type × Term -> Tactic
+destruct⊎′ (def (quote _⊎_) (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ ∷ []) , tm) g
+    = [ record
+        { #goal = 2
+        ; goals
+            = g ↑ ty₁
+            ∷ g ↑ ty₂
+            ∷ []
+        ; thunk = \{ (tm₁ ∷ tm₂ ∷ []) ->
+            def (quote [_,_]′)
+                ( h₁ ∷ hArg ty₁ ∷ hArg unknown ∷ hArg (g .goal) ∷ h₂ ∷ hArg ty₂
+                ∷ vArg (lam visible (abs "destruct⊎inj₁"  -- todo see if dots can be used
+                    tm₁))
+                ∷ vArg (lam visible (abs "destruct⊎inj₂" tm₂))
+                ∷ vArg tm ∷ [] ) } } ]
+destruct⊎′ _ = fail
+
+destruct⊎ : Type × Term -> Strategy
+destruct⊎ = ♮ ∘ destruct⊎′
 
 split×′ : Tactic
 split×′ record
@@ -78,7 +98,7 @@ local′ {n = n} F record { goal = goal ; context = context } =
 local : ∀ {n : Nat}
     -> (Vec (Type × Term) n -> List (Type × Term))
     -> Strategy
-local F = ♮ (local′ F)
+local = ♮ ∘ local′
 
 -- Directly adds new term to context
 pose′ : List (Type × Term) -> Tactic
@@ -96,12 +116,15 @@ local-pose′ F g = ♭ (♯ (local′ F) >==> ♯ (pose′ (g .context))) g
 local-pose : ∀ {n : Nat}
     -> (Vec (Type × Term) n -> List (Type × Term))
     -> Strategy
-local-pose F = ♮ (local-pose′ F)
+local-pose = ♮ ∘ local-pose′
 
-destruct× : Vec (Type × Term) 1 -> List (Type × Term)
-destruct× ((def (quote _×_)
-    (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ ∷ []) , tm) ∷ [])
-    = (ty₁ , def (quote fst) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ []))
-    ∷ (ty₂ , def (quote snd) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ []))
-    ∷ []
-destruct× (u ∷ []) = [ u ]
+destruct× : Strategy
+destruct× = local-pose d
+    where
+        d : Vec (Type × Term) 1 -> List (Type × Term)
+        d ((def (quote _×_)
+            (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ ∷ []) , tm) ∷ [])
+            = (ty₁ , def (quote fst) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ []))
+            ∷ (ty₂ , def (quote snd) (h₁ ∷ h₂ ∷ hArg ty₁ ∷ hArg ty₂ ∷ vArg tm ∷ []))
+            ∷ []
+        d (u ∷ []) = [ u ]
