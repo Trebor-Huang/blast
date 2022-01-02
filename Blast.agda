@@ -15,6 +15,7 @@ open import Data.Maybe using (Maybe; nothing; just) renaming (map to mapₘ)
 open import Function.Base
 open import Relation.Nullary using (does)
 open import Agda.Builtin.Nat
+open import Data.Nat.Show using (show)
 open import Agda.Builtin.Unit
 open import Agda.Builtin.String
 
@@ -139,7 +140,7 @@ private
     done zero [] thunk hole = do
         qth <- quoteTC (thunk [])
         nqth <- normalise qth
-        debugPrint "Blast.done" DONE_VERBOSITY
+        debugPrint "Blast.by!" DONE_VERBOSITY
             ( strErr "Done tactic: 🎉\nResult:\n"
             ∷ termErr nqth
             ∷ [] )
@@ -150,7 +151,7 @@ private
             qm <- quoteTC newMeta
             qg <- quoteTC (g .goal)
             qn <- quoteTC n
-            debugPrint "Blast.done" DONE_VERBOSITY
+            debugPrint "Blast.by!" DONE_VERBOSITY
                 ( strErr "Done tactic: n = "
                 ∷ termErr qn
                 ∷ strErr "\nGoal:\n  "
@@ -173,7 +174,13 @@ macro
     by!_ : Strategy -> Term -> TC ⊤
     by!_ st hole = do
         env <- currentEnv hole
-        try (st env) hole
+        let envs = st env
+        debugPrint "Blast.by!" DONE_VERBOSITY
+            ( strErr "By! tactic encountered "
+            ∷ strErr (show (length envs))
+            ∷ strErr " backtrack routes."
+            ∷ [] )
+        try envs hole
 
 infix 0 by!_
 
@@ -192,11 +199,8 @@ assumption = ♮ assumption′
 _>==>_ : Strategy -> Strategy -> Strategy
 s₁ >==> s₂ = concatMap s₂ ∘ s₁
 
-_<~>_ : Strategy -> Strategy -> Strategy
-(s₁ <~> s₂) env = s₁ env +++ s₂ env
-
-perhaps : Strategy -> Strategy
-perhaps = _<~> idle
+_<~>_ : Tactic -> Tactic -> Tactic
+(t₁ <~> t₂) g = t₁ g +++ t₂ g
 
 -- Apply strategy to top goal.
 ♭ : Strategy -> Tactic
@@ -209,7 +213,7 @@ _>==>′_ : Tactic -> Tactic -> Tactic
 t₁ >==>′ t₂ = ♭ (♯ t₁ >==> ♯ t₂)
 
 infixl 5 _>==>_
-infixl 4 _<~>_
+infixl 6 _<~>_
 infixl 6 _>==>′_
 
 -- Snucks in one more argument, and shifts the de Bruijn indices.

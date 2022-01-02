@@ -83,7 +83,7 @@ split⊎₂′ record
 split⊎₂′ = fail
 
 split⊎ : Strategy
-split⊎ = ♮ split⊎₁′ <~> ♮ split⊎₂′
+split⊎ = ♮ (split⊎₁′ <~> split⊎₂′)
 
 private
     cartPower : ∀ {ℓ} {A : Set ℓ}
