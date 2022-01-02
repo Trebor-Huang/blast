@@ -205,8 +205,12 @@ perhaps = _<~> idle
 ⟦_⟧ : Strategy -> Strategy
 ⟦_⟧ = ♯ ∘ ♭
 
+_>==>′_ : Tactic -> Tactic -> Tactic
+t₁ >==>′ t₂ = ♭ (♯ t₁ >==> ♯ t₂)
+
 infixl 5 _>==>_
 infixl 4 _<~>_
+infixl 6 _>==>′_
 
 -- Snucks in one more argument, and shifts the de Bruijn indices.
 _↑_ : Goal -> Type -> Goal

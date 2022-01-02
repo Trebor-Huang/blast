@@ -32,14 +32,17 @@ destruct⊎′ (def (quote _⊎_) (h₁ ∷ h₂ ∷ vArg ty₁ ∷ vArg ty₂ �
         ; thunk = \{ (tm₁ ∷ tm₂ ∷ []) ->
             def (quote [_,_]′)
                 ( h₁ ∷ hArg ty₁ ∷ hArg unknown ∷ hArg (g .goal) ∷ h₂ ∷ hArg ty₂
-                ∷ vArg (lam visible (abs "destruct⊎inj₁"  -- todo see if dots can be used
+                ∷ vArg (lam visible (abs "destruct⊎.inj₁"  -- todo see if dots can be used
                     tm₁))
-                ∷ vArg (lam visible (abs "destruct⊎inj₂" tm₂))
+                ∷ vArg (lam visible (abs "destruct⊎.inj₂" tm₂))
                 ∷ vArg tm ∷ [] ) } } ]
 destruct⊎′ _ = fail
 
 destruct⊎ : Type × Term -> Strategy
 destruct⊎ = ♮ ∘ destruct⊎′
+
+onContext : (Type × Term -> Tactic) -> Tactic
+onContext F g = foldl _>==>′_ idtac (map F (g .context)) g
 
 split×′ : Tactic
 split×′ record
@@ -111,7 +114,7 @@ pose ps = ♮ (pose′ ps)
 local-pose′ : ∀ {n : Nat}
     -> (Vec (Type × Term) n -> List (Type × Term))
     -> Tactic
-local-pose′ F g = ♭ (♯ (local′ F) >==> ♯ (pose′ (g .context))) g
+local-pose′ F g = (local′ F >==>′ pose′ (g .context)) g
 
 local-pose : ∀ {n : Nat}
     -> (Vec (Type × Term) n -> List (Type × Term))
