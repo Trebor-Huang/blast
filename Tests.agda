@@ -16,7 +16,7 @@ test1 u v =
     >==> perhaps split×
     >==> assumption
 
-test2 : Nat ⊎ (Set × Nat) -> Nat ⊎ Set
+test2 : Nat ⊎ (Set × Set) -> Nat ⊎ Set
 test2 u =
     by!  ♯ (onContext destruct⊎′)
     >==> destruct×

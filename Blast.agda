@@ -6,7 +6,7 @@ open import Reflection hiding (_≟_)
 open import Reflection.Term using (_≟_)
 open import Reflection.DeBruijn
 open import Reflection.TypeChecking.Monad.Syntax
-open import Data.List.Base using (List; []; _∷_; [_]; zipWith; concatMap; length; _─_) renaming (map to mapₗ; _++_ to _+++_)
+open import Data.List.Base using (List; []; _∷_; [_]; cartesianProductWith; concatMap; length; _─_) renaming (map to mapₗ; _++_ to _+++_)
 open import Data.Vec.Base using (Vec; []; _∷_; _++_; head; take; drop; map; foldl)
 open import Data.Bool.Base using (Bool; if_then_else_)
 open import Data.Product using (_×_; _,_; proj₁; proj₂) renaming (map to mapₚ)
@@ -39,7 +39,7 @@ private
 
     Vec-List : ∀ {a} {m : Nat} {A : Set a} -> Vec (List A) m -> List (Vec A m)
     Vec-List [] = [] ∷ []
-    Vec-List (xs ∷ vec) = zipWith _∷_ xs (Vec-List vec)
+    Vec-List (xs ∷ vec) = cartesianProductWith _∷_ xs (Vec-List vec)
 
     inFin : (m n : Nat) -> Maybe (Fin m)
     inFin zero n = nothing
